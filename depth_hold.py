@@ -80,6 +80,15 @@ def arm():
         0,
         1, 0, 0, 0, 0, 0, 0)
 
+    
+# Disarm
+def disarm():
+    master.mav.command_long_send(
+        master.target_system,
+        master.target_component,
+        mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM,
+        0,
+        0, 0, 0, 0, 0, 0, 0)
 
 # 单个推进器控制
 def set_motor_pwm(channel, pwm):
@@ -101,6 +110,30 @@ def force_distri(out1, out2, out3):
     a2 = np.mat(arr2)
     global out
     out = a1*a2
+    
+ 
+# 读取深度信息
+def depth_data():
+    while True:
+        msg = master.recv_match()
+        if not msg:
+            continue
+        if msg.get_type() == 'VFR_HUD':
+            depth = -msg.alt
+            break
+    return depth
+
+
+# 读取角度信息
+def angle_data():
+    while True:
+        msg = master.recv_match()
+        if not msg:
+            continue
+        if msg.get_type() == 'ATTITUDE':
+            pitch = msg.pitch
+            roll = msg.roll
+    return pitch, roll
 
 
 # 保存数据
@@ -124,18 +157,13 @@ roll_hold = PID(1, 0.8, 0)
 depth = 0.0
 pitch = 0.0
 roll = 0.0
+disarm()
+time.sleep(2.0)
 arm()
 while True:
     try:
-        msg = master.recv_match()
-        if not msg:
-            continue
-        if msg.get_type() == 'VFR_HUD':
-            alt = msg.alt
-            depth = -alt
-        if msg.get_type() == 'ATTITUDE':
-            pitch = msg.pitch
-            roll = msg.roll
+        depth = depth_data()
+        pitch, roll = angle_data()
         print("深度为 "+str(depth)+" 米")
         print("俯仰角为 "+str(pitch)+" pi")
         print("横倾角为 "+str(roll)+" pi")
